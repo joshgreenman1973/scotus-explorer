@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCOTUS Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#faf8f5;--surface:#fff;--surface2:#f3f0eb;--surface3:#e8e4dd;
+  --text:#1a1714;--text2:#5c564e;--text3:#8c857b;
+  --border:#ddd8d0;--border2:#c8c2b8;
+  --accent:#8b6914;--accent2:#b8941e;--accent-light:#f5ecd8;
+  --radius:6px;--radius-sm:4px;--radius-xs:3px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  line-height:1.6;min-height:100vh;overflow-x:hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* Header */
+.header{
+  padding:3rem 2rem 2rem;text-align:center;
+  border-bottom:1px solid var(--border);
+  background:#fff;
+}
+.logo{
+  font-family:'Source Serif 4',Georgia,serif;font-weight:700;
+  font-size:clamp(2rem,4.5vw,3.2rem);
+  letter-spacing:-0.03em;color:var(--text);
+  margin-bottom:0.25rem;
+}
+.tagline{color:var(--text3);font-size:0.95rem;font-weight:400;margin-bottom:2rem}
+.tagline span{color:var(--text3);font-size:0.8rem;display:block;margin-top:0.25rem;font-style:italic}
+
+/* Search */
+.search-wrap{
+  max-width:560px;margin:0 auto;position:relative;
+}
+.search-wrap svg{
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;color:var(--text3);pointer-events:none;
+  transition:color 0.3s;
+}
+.search-wrap:focus-within svg{color:var(--text2)}
+.search{
+  width:100%;padding:14px 18px 14px 46px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);font-size:0.95rem;
+  font-family:'DM Sans',system-ui,sans-serif;
+  transition:all 0.3s ease;outline:none;
+}
+.search:focus{
+  border-color:var(--accent);background:#fff;
+  box-shadow:0 0 0 3px rgba(139,105,20,0.08);
+}
+.search::placeholder{color:var(--text3)}
+
+/* Topic filters */
+.topics-wrap{
+  padding:1.25rem 2rem 0;max-width:1200px;margin:0 auto;
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+}
+.topic-pill{
+  padding:7px 14px;border-radius:999px;font-size:0.8rem;font-weight:500;
+  border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;transition:all 0.2s ease;
+  display:flex;align-items:center;gap:5px;
+  user-select:none;color:var(--text2);
+}
+.topic-pill:hover{border-color:var(--border2);background:var(--surface2)}
+.topic-pill.active{
+  border-color:var(--accent);color:var(--accent);
+  background:var(--accent-light);
+  font-weight:600;
+}
+.topic-pill .count{
+  background:var(--surface2);padding:1px 6px;border-radius:999px;
+  font-size:0.7rem;color:var(--text3);font-weight:500;
+}
+.topic-pill.active .count{
+  background:rgba(139,105,20,0.12);color:var(--accent);
+}
+
+/* Doctrine tracker */
+.doctrine-bar{
+  max-width:1200px;margin:1rem auto 0;padding:0 2rem;
+  overflow:hidden;transition:all 0.4s ease;
+}
+.doctrine-bar.hidden{max-height:0;opacity:0;margin:0 auto}
+.doctrine-bar.visible{max-height:120px;opacity:1}
+.doctrine-inner{
+  background:var(--accent-light);border:1px solid #e0d5b8;border-radius:var(--radius-sm);
+  padding:12px 18px;font-size:0.84rem;color:var(--text2);line-height:1.7;
+  border-left:3px solid var(--accent);
+}
+.doctrine-inner strong{color:var(--text);font-weight:600}
+
+/* Controls bar */
+.controls{
+  max-width:1200px;margin:1rem auto 0;padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+}
+.case-count{font-size:0.85rem;color:var(--text3);font-weight:400}
+.case-count strong{color:var(--text);font-weight:600}
+.view-toggles{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:3px;border:1px solid var(--border)}
+.view-btn{
+  padding:5px 14px;border-radius:var(--radius-xs);font-size:0.78rem;font-weight:500;
+  border:none;background:transparent;color:var(--text3);cursor:pointer;
+  transition:all 0.2s;font-family:'DM Sans',system-ui,sans-serif;
+}
+.view-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.view-btn:hover:not(.active){color:var(--text2)}
+.sort-select{
+  padding:5px 10px;border-radius:var(--radius);font-size:0.78rem;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  font-family:'DM Sans',system-ui,sans-serif;cursor:pointer;font-weight:500;
+}
+
+/* Cards grid */
+.cases-grid{
+  max-width:1200px;margin:1.25rem auto 0;padding:0 2rem 4rem;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:14px;
+}
+
+/* Individual card */
+.case-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);
+  border-left:3px solid var(--card-color,var(--border));
+  padding:18px 20px 16px;
+  cursor:pointer;transition:all 0.2s ease;
+  position:relative;
+}
+.case-card:hover{
+  border-color:var(--border2);
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.case-card.landmark{
+  border-left-width:4px;
+  background:linear-gradient(135deg,#fff 0%,#fdfbf6 100%);
+}
+.card-badges{display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
+.badge{
+  font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  padding:2px 7px;border-radius:3px;
+}
+.badge-landmark{
+  background:var(--accent-light);color:var(--accent);border:1px solid #ddd0a8;
+}
+.badge-recent{
+  background:#eef6ff;color:#3b7dd8;border:1px solid #d0e3f7;
+}
+.badge-overruled{
+  background:#fff0f0;color:#b84040;border:1px solid #e8c8c8;
+  text-decoration:line-through;text-decoration-color:rgba(184,64,64,0.4);
+}
+.case-name{
+  font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;
+  font-size:1.25rem;line-height:1.3;margin-bottom:4px;
+  color:var(--text);
+}
+.landmark .case-name{font-size:1.35rem;font-weight:700}
+.case-meta{
+  display:flex;gap:8px;align-items:center;margin-bottom:8px;
+  font-size:0.76rem;color:var(--text3);font-weight:500;
+}
+.case-meta .year{
+  color:var(--accent);font-weight:700;font-size:0.82rem;
+}
+.case-meta .dot{opacity:0.3}
+.case-holding{
+  font-size:0.88rem;color:var(--text2);line-height:1.65;
+}
+.landmark .case-holding{color:var(--text);font-weight:400}
+.card-topic-tag{
+  display:inline-block;margin-top:10px;font-size:0.7rem;font-weight:600;
+  padding:2px 8px;border-radius:999px;
+  background:var(--surface2);color:var(--text3);
+  border:1px solid var(--border);
+}
+
+/* Expanded details */
+.case-details{
+  display:none;margin-top:0;
+}
+.case-card.expanded .case-details{
+  display:block;margin-top:14px;
+}
+.details-inner{
+  border-top:1px solid var(--border);padding-top:12px;
+}
+.detail-row{
+  display:flex;gap:8px;margin-bottom:6px;font-size:0.82rem;
+}
+.detail-label{color:var(--text3);font-weight:600;min-width:86px;flex-shrink:0;text-transform:uppercase;font-size:0.68rem;letter-spacing:0.04em;padding-top:2px}
+.detail-value{color:var(--text2)}
+.detail-value em{font-style:italic;color:var(--text)}
+.detail-links{display:flex;gap:10px;margin-top:10px}
+.detail-link{
+  font-size:0.78rem;color:var(--accent);text-decoration:none;
+  font-weight:600;transition:color 0.2s;
+}
+.detail-link:hover{color:var(--accent2)}
+
+/* Timeline view */
+.cases-timeline{
+  max-width:800px;margin:2rem auto 0;padding:0 2rem 4rem;
+  position:relative;display:none;
+}
+.cases-timeline.active{display:block}
+.cases-grid.active{display:grid}
+.timeline-line{
+  position:absolute;left:calc(2rem + 20px);top:0;bottom:0;
+  width:2px;background:var(--border);
+}
+.timeline-year-marker{
+  position:relative;padding:24px 0 12px 56px;
+  font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:1.4rem;
+  color:var(--text3);
+}
+.timeline-year-marker::before{
+  content:'';position:absolute;left:14px;top:32px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--border2);border:2px solid var(--bg);
+}
+.timeline-card{
+  position:relative;margin-left:56px;margin-bottom:12px;
+}
+.timeline-card::before{
+  content:'';position:absolute;left:-36px;top:22px;
+  width:10px;height:10px;border-radius:50%;
+  background:var(--card-color,var(--text3));
+  border:2px solid var(--bg);
+}
+.timeline-card .case-card{cursor:pointer}
+
+/* No results */
+.no-results{
+  text-align:center;padding:4rem 2rem;color:var(--text3);
+  font-size:1.05rem;
+}
+.no-results span{display:block;font-size:2rem;margin-bottom:1rem}
+
+/* Footer */
+.footer{
+  text-align:center;padding:2rem;color:var(--text3);font-size:0.72rem;
+  border-top:1px solid var(--border);max-width:1200px;margin:0 auto;
+}
+.footer a{color:var(--text2);text-decoration:none}
+.footer a:hover{color:var(--accent)}
+
+/* Animations */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.case-card,.timeline-card{
+  animation:fadeUp 0.3s ease both;
+}
+.search-highlight{
+  background:rgba(139,105,20,0.15);border-radius:2px;padding:0 1px;
+}
+
+/* Mode tabs */
+.mode-tabs{
+  display:flex;justify-content:center;gap:0;margin:1.5rem auto 0;
+  max-width:320px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+}
+.mode-tab{
+  flex:1;padding:9px 0;font-size:0.82rem;font-weight:600;text-align:center;
+  border:none;background:var(--surface);color:var(--text3);cursor:pointer;
+  font-family:'DM Sans',system-ui,sans-serif;transition:all 0.2s;
+}
+.mode-tab:not(:last-child){border-right:1px solid var(--border)}
+.mode-tab.active{background:var(--accent-light);color:var(--accent)}
+.mode-tab:hover:not(.active){background:var(--surface2)}
+
+/* Justice explorer */
+.justice-wrap{display:none;max-width:1200px;margin:0 auto;padding:0 2rem}
+.justice-wrap.active{display:block}
+.justice-search-wrap{max-width:400px;margin:1.25rem auto;position:relative}
+.justice-search{
+  width:100%;padding:10px 14px;font-size:0.9rem;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);color:var(--text);
+  font-family:'DM Sans',system-ui,sans-serif;outline:none;
+}
+.justice-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,105,20,0.08)}
+.justice-list{
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  max-width:900px;margin:0.75rem auto;
+}
+.justice-chip{
+  padding:5px 12px;border-radius:999px;font-size:0.78rem;font-weight:500;
+  border:1px solid var(--border);background:var(--surface);color:var(--text2);
+  cursor:pointer;transition:all 0.2s;
+}
+.justice-chip:hover{border-color:var(--border2);background:var(--surface2)}
+.justice-chip.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:600}
+.justice-chip .chip-count{font-size:0.68rem;color:var(--text3);margin-left:3px}
+.justice-chip.active .chip-count{color:var(--accent)}
+
+.justice-profile{
+  max-width:800px;margin:1.25rem auto;padding:16px 20px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  border-left:3px solid var(--accent);
+}
+.justice-profile h2{
+  font-family:'Source Serif 4',Georgia,serif;font-size:1.4rem;
+  font-weight:700;margin-bottom:4px;
+}
+.justice-profile .jp-meta{font-size:0.84rem;color:var(--text2);margin-bottom:8px}
+.justice-profile .jp-stats{display:flex;gap:20px;flex-wrap:wrap}
+.jp-stat{font-size:0.8rem}
+.jp-stat strong{font-weight:700;color:var(--text)}
+.jp-stat-label{color:var(--text3);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em}
+
+/* Role badges on cards */
+.role-badge{
+  font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  padding:2px 7px;border-radius:3px;
+}
+.role-majority{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+.role-concurrence{background:#fff3e0;color:#e65100;border:1px solid #ffe0b2}
+.role-dissent{background:#fce4ec;color:#c62828;border:1px solid #f8bbd0}
+.role-author{background:var(--accent-light);color:var(--accent);border:1px solid #ddd0a8;font-weight:800}
+
+/* Responsive */
+@media(max-width:768px){
+  .header{padding:2rem 1.2rem 1.5rem}
+  .topics-wrap{padding:1rem 1.2rem 0;gap:5px}
+  .topic-pill{padding:5px 10px;font-size:0.74rem}
+  .controls{padding:0 1.2rem}
+  .cases-grid{padding:0 1.2rem 3rem;grid-template-columns:1fr;gap:10px}
+  .cases-timeline{padding:0 1.2rem 3rem}
+  .case-name{font-size:1.1rem}
+  .logo{font-size:1.9rem}
+}
+@media(max-width:480px){
+  .topics-wrap{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;padding-bottom:8px;
+    scrollbar-width:none;
+  }
+  .topics-wrap::-webkit-scrollbar{display:none}
+  .topic-pill{flex-shrink:0}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">SCOTUS Explorer</div>
+  <div class="tagline">
+    Every landmark ruling, one sentence at a time
+    <span>Sourced from Oyez, Cornell LII &amp; the Supreme Court Database</span>
+  </div>
+  <div class="search-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+    </svg>
+    <input type="text" class="search" id="search" placeholder="Search cases, holdings, topics..." autocomplete="off">
+  </div>
+</div>
+
+<div class="mode-tabs">
+  <button class="mode-tab active" data-mode="topics">By Topic</button>
+  <button class="mode-tab" data-mode="justices">By Justice</button>
+</div>
+
+<div class="topics-wrap" id="topics"></div>
+
+<div class="justice-wrap" id="justice-panel">
+  <div class="justice-search-wrap">
+    <input type="text" class="justice-search" id="justice-search" placeholder="Search justices..." autocomplete="off">
+  </div>
+  <div class="justice-list" id="justice-list"></div>
+  <div class="justice-profile" id="justice-profile" style="display:none"></div>
+</div>
+
+<div class="doctrine-bar hidden" id="doctrine">
+  <div class="doctrine-inner" id="doctrine-text"></div>
+</div>
+
+<div class="controls">
+  <div class="case-count" id="case-count"></div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <select class="sort-select" id="sort">
+      <option value="year-desc">Newest first</option>
+      <option value="year-asc">Oldest first</option>
+      <option value="landmark">Landmark first</option>
+    </select>
+    <div class="view-toggles">
+      <button class="view-btn active" data-view="grid">Grid</button>
+      <button class="view-btn" data-view="timeline">Timeline</button>
+    </div>
+  </div>
+</div>
+
+<div class="cases-grid active" id="cases-grid"></div>
+<div class="cases-timeline" id="cases-timeline">
+  <div class="timeline-line"></div>
+  <div id="timeline-content"></div>
+</div>
+
+<div class="footer">
+  Data sourced from <a href="https://oyez.org" target="_blank">Oyez.org</a>,
+  <a href="https://www.law.cornell.edu/supremecourt/text" target="_blank">Cornell LII</a> &amp;
+  <a href="http://scdb.wustl.edu/" target="_blank">Supreme Court Database</a>.
+  Not legal advice. For educational purposes only.
+</div>
+
+<script>
+// ─── Topic Definitions ────────────────────────────
+const TOPICS = {
+  "1a":       { name:"First Amendment",      short:"First Amend.",  color:"#9b6b2f", icon:"", desc:"Speech, press, religion, assembly, and petition" },
+  "2a":       { name:"Second Amendment",      short:"Second Amend.", color:"#7a8b5c", icon:"", desc:"Right to keep and bear arms" },
+  "due":      { name:"Due Process",           short:"Due Process",   color:"#6b7a99", icon:"", desc:"Fundamental rights and fair legal procedures" },
+  "equal":    { name:"Equal Protection",      short:"Equal Prot.",   color:"#8b6914", icon:"", desc:"Equal treatment under the law and civil rights" },
+  "privacy":  { name:"Privacy & Reproductive",short:"Privacy",       color:"#8b5e6b", icon:"", desc:"Personal autonomy, bodily integrity, and reproductive rights" },
+  "criminal": { name:"Criminal Justice",      short:"Criminal",      color:"#8b4040", icon:"", desc:"Search, seizure, punishment, and fair trial rights" },
+  "exec":     { name:"Executive Power",       short:"Exec. Power",   color:"#4a6e8b", icon:"", desc:"Presidential authority and separation of powers" },
+  "voting":   { name:"Voting & Elections",    short:"Voting",        color:"#5c7a5c", icon:"", desc:"Voting rights, redistricting, and election law" },
+  "commerce": { name:"Commerce & Regulation", short:"Commerce",      color:"#7a6b8b", icon:"", desc:"Federal regulatory power and its limits" },
+  "immigration":{ name:"Immigration",         short:"Immigration",   color:"#5c8b7a", icon:"", desc:"Immigration enforcement and immigrant rights" },
+  "federalism":{ name:"Federalism",           short:"Federalism",    color:"#8b7040", icon:"", desc:"Federal-state power balance" }
+};
+
+// ─── Doctrine Evolution Summaries ─────────────────
+const DOCTRINE = {
+  "1a": '<strong>Speech:</strong> "Clear and present danger" (1919) → "Imminent lawless action" (1969) → Broad protection for political and symbolic speech. <strong>Religion:</strong> Lemon test (1971) → Overruled by Kennedy v. Bremerton (2022) → History and tradition approach.',
+  "2a": 'Collective militia interpretation → <strong>Individual right</strong> to bear arms (Heller, 2008) → Applies to states (McDonald, 2010) → Historical tradition test replaces means-end scrutiny (Bruen, 2022).',
+  "due": '"Liberty of contract" era (Lochner, 1905) → Right to privacy (Griswold, 1965) → Expanded substantive due process (Lawrence, Obergefell) → <strong>Dobbs narrowed</strong> unenumerated rights (2022).',
+  "equal": '"Separate but equal" (Plessy, 1896) → <strong>Overruled by Brown</strong> (1954) → Strict scrutiny for race (Loving) → Intermediate scrutiny for sex (Reed, VMI) → <strong>Race-conscious admissions ended</strong> (SFFA, 2023).',
+  "privacy": 'Right to privacy found in "penumbras" (Griswold, 1965) → Right to abortion (Roe, 1973) → Undue burden standard (Casey, 1992) → <strong>Roe overturned</strong>, authority returned to states (Dobbs, 2022).',
+  "criminal": 'Exclusionary rule applied to states (Mapp, 1961) → Miranda warnings (1966) → Reasonable expectation of privacy (Katz, 1967) → <strong>Digital privacy</strong> requires warrants (Riley, Carpenter). Death penalty: struck down (Furman) → reinstated (Gregg) → limited (Atkins, Roper).',
+  "exec": '<strong>Judicial review</strong> established (Marbury, 1803) → Executive limited by Congress (Youngstown, 1952) → Agency deference (Chevron, 1984) → <strong>Chevron overruled</strong> (Loper Bright, 2024). Major questions doctrine rises (West Virginia v. EPA, 2022). Presidential immunity expanded (Trump, 2024).',
+  "voting": '"One person, one vote" (Reynolds, 1964) → Voting Rights Act enforcement → <strong>Preclearance gutted</strong> (Shelby County, 2013) → Partisan gerrymandering non-justiciable (Rucho, 2019) → Independent state legislature theory rejected (Moore, 2023).',
+  "commerce": 'Broad federal power (Gibbons, 1824) → Expansive New Deal interpretation (Wickard, 1942) → <strong>Limits recognized</strong> (Lopez, 1995) → ACA individual mandate sustained as tax but Commerce Clause has boundaries (NFIB, 2012).',
+  "immigration": 'Federal supremacy over immigration (Arizona v. US, 2012) → <strong>Executive discretion</strong> on enforcement upheld (US v. Texas, 2023) → Education rights for undocumented children (Plyler, 1982) → Travel ban upheld under broad executive authority (Trump v. Hawaii, 2018).',
+  "federalism": '<strong>Implied powers</strong> and federal supremacy (McCulloch, 1819) → Anti-commandeering principle (Printz, 1997) → States retain broad police powers. Dred Scott (1857) remains the Court\'s most condemned decision.'
+};
+
+// ─── Case Data ────────────────────────────────────
+const CASES = [
+  // ═══ FIRST AMENDMENT ═══
+  {name:"Schenck v. United States",year:1919,topics:["1a"],holding:"Established the \"clear and present danger\" test, ruling that speech creating a clear danger of unlawful action can be restricted.",landmark:true,vote:"9-0",author:"Holmes",question:"Can the government restrict speech that poses a danger during wartime?",citation:"249 U.S. 47"},
+  {name:"Brandenburg v. Ohio",year:1969,topics:["1a"],holding:"Speech can only be restricted if it is directed to inciting imminent lawless action and is likely to produce such action.",landmark:true,vote:"9-0",author:"Per Curiam",question:"Does a state law criminalizing advocacy of violence violate the First Amendment?",citation:"395 U.S. 444"},
+  {name:"Tinker v. Des Moines",year:1969,topics:["1a"],holding:"Students do not shed their First Amendment rights at the schoolhouse gate; schools cannot suppress student speech unless it substantially disrupts school operations.",landmark:true,vote:"7-2",author:"Fortas",question:"Does prohibiting students from wearing armbands in protest violate their free speech rights?",citation:"393 U.S. 503"},
+  {name:"New York Times Co. v. Sullivan",year:1964,topics:["1a"],holding:"Public officials must prove \"actual malice\" — knowledge of falsity or reckless disregard for truth — to win defamation suits against the press.",landmark:true,vote:"9-0",author:"Brennan",question:"Can a public official recover damages for a defamatory falsehood about official conduct without proving actual malice?",citation:"376 U.S. 254"},
+  {name:"New York Times Co. v. United States",year:1971,topics:["1a","exec"],holding:"The government carries a heavy burden in justifying prior restraint on publication, and failed to meet it regarding the Pentagon Papers.",landmark:true,vote:"6-3",author:"Per Curiam",question:"Can the government prevent newspapers from publishing classified Pentagon documents about the Vietnam War?",citation:"403 U.S. 713"},
+  {name:"Texas v. Johnson",year:1989,topics:["1a"],holding:"Flag burning is constitutionally protected symbolic speech under the First Amendment.",landmark:true,vote:"5-4",author:"Brennan",question:"Is flag desecration a form of speech protected by the First Amendment?",citation:"491 U.S. 397"},
+  {name:"Citizens United v. FEC",year:2010,topics:["1a","voting"],holding:"The government cannot restrict independent political expenditures by corporations, associations, or labor unions, as political spending is protected speech.",landmark:true,vote:"5-4",author:"Kennedy",question:"Do restrictions on corporate independent expenditures for political campaigns violate the First Amendment?",citation:"558 U.S. 310"},
+  {name:"Engel v. Vitale",year:1962,topics:["1a"],holding:"Government-directed prayer in public schools violates the Establishment Clause, even if participation is voluntary.",landmark:true,vote:"6-1",author:"Black",question:"Does official prayer in public schools violate the Establishment Clause?",citation:"370 U.S. 421"},
+  {name:"Lemon v. Kurtzman",year:1971,topics:["1a"],holding:"Established a three-part test for Establishment Clause cases: the law must have a secular purpose, must not advance or inhibit religion, and must not create excessive government entanglement with religion.",landmark:false,vote:"8-0",author:"Burger",question:"Do state programs subsidizing teacher salaries at religious schools violate the Establishment Clause?",citation:"403 U.S. 602",overruled:true,overruledBy:"Kennedy v. Bremerton School District (2022)"},
+  {name:"Employment Division v. Smith",year:1990,topics:["1a"],holding:"Neutral, generally applicable laws that incidentally burden religious practice do not violate the Free Exercise Clause and need not be justified by a compelling government interest.",landmark:true,vote:"6-3",author:"Scalia",question:"Can a state deny unemployment benefits to workers fired for using peyote as part of a religious ceremony?",citation:"494 U.S. 872"},
+  {name:"Masterpiece Cakeshop v. Colorado Civil Rights Commission",year:2018,topics:["1a"],holding:"Colorado's civil rights commission showed impermissible hostility toward a baker's sincere religious beliefs when enforcing its anti-discrimination law, violating the Free Exercise Clause.",landmark:false,vote:"7-2",author:"Kennedy",question:"Does applying a public accommodations law to compel a baker to create a wedding cake for a same-sex couple violate his First Amendment rights?",citation:"584 U.S. 617"},
+  {name:"303 Creative LLC v. Elenis",year:2023,topics:["1a"],holding:"The First Amendment prohibits a state from forcing a website designer to create expressive designs conveying messages with which she disagrees.",landmark:false,vote:"6-3",author:"Gorsuch",question:"Does applying a public accommodations law to compel an artist to create websites celebrating same-sex marriage violate the Free Speech Clause?",citation:"600 U.S. 570"},
+  {name:"Kennedy v. Bremerton School District",year:2022,topics:["1a"],holding:"A public school football coach's post-game prayers on the field are protected private religious expression, not government-endorsed speech; the Lemon test is overruled in favor of a historical practices analysis.",landmark:true,vote:"6-3",author:"Gorsuch",question:"Does the Free Exercise and Free Speech Clauses protect a public school coach who prays on the football field after games?",citation:"597 U.S. 507"},
+  {name:"Snyder v. Phelps",year:2011,topics:["1a"],holding:"Westboro Baptist Church's protests near military funerals, though deeply offensive, are protected speech on matters of public concern and cannot give rise to tort liability.",landmark:false,vote:"8-1",author:"Roberts",question:"Does the First Amendment protect protesters at a military funeral from tort liability for intentional infliction of emotional distress?",citation:"562 U.S. 443"},
+
+  // ═══ SECOND AMENDMENT ═══
+  {name:"District of Columbia v. Heller",year:2008,topics:["2a"],holding:"The Second Amendment protects an individual's right to possess a firearm for self-defense within the home, unconnected with service in a militia.",landmark:true,vote:"5-4",author:"Scalia",concurrences:[],dissents:["Stevens","Souter","Ginsburg","Breyer"],question:"Does the District of Columbia's handgun ban violate the Second Amendment right to keep and bear arms?",citation:"554 U.S. 570"},
+  {name:"McDonald v. City of Chicago",year:2010,topics:["2a"],holding:"The Second Amendment right to keep and bear arms for self-defense is incorporated against state and local governments through the Fourteenth Amendment's Due Process Clause.",landmark:true,vote:"5-4",author:"Alito",question:"Does the Second Amendment apply to state and local gun regulations?",citation:"561 U.S. 742"},
+  {name:"New York State Rifle & Pistol Association v. Bruen",year:2022,topics:["2a"],holding:"The government must demonstrate that a firearm regulation is consistent with the nation's historical tradition of firearm regulation; New York's concealed carry licensing regime is unconstitutional.",landmark:true,vote:"6-3",author:"Thomas",question:"Does New York's requirement of \"proper cause\" to obtain a concealed carry license violate the Second Amendment?",citation:"597 U.S. 1"},
+  {name:"United States v. Rahimi",year:2024,topics:["2a"],holding:"Prohibiting firearm possession by individuals subject to domestic violence restraining orders is consistent with the nation's historical tradition of disarming individuals who pose a credible threat to others.",landmark:false,vote:"8-1",author:"Roberts",question:"Does the federal ban on firearm possession by persons under domestic violence restraining orders violate the Second Amendment?",citation:"602 U.S. 680"},
+
+  // ═══ DUE PROCESS ═══
+  {name:"Lochner v. New York",year:1905,topics:["due"],holding:"A state law limiting bakers' working hours violates the \"liberty of contract\" implied by the Due Process Clause — a decision now widely viewed as a cautionary example of judicial overreach.",landmark:true,vote:"5-4",author:"Peckham",question:"Does a state law setting maximum working hours for bakers violate the Fourteenth Amendment's Due Process Clause?",citation:"198 U.S. 45"},
+  {name:"Griswold v. Connecticut",year:1965,topics:["due","privacy"],holding:"The Constitution protects a right to marital privacy, found in the \"penumbras\" of the Bill of Rights, which prohibits states from banning contraceptive use by married couples.",landmark:true,vote:"7-2",author:"Douglas",question:"Does a state law prohibiting contraceptive use by married couples violate the right to privacy?",citation:"381 U.S. 479"},
+  {name:"Gideon v. Wainwright",year:1963,topics:["due","criminal"],holding:"The right to an attorney is fundamental to a fair trial; states must provide lawyers to defendants in felony cases who cannot afford them.",landmark:true,vote:"9-0",author:"Black",question:"Does the Sixth Amendment's right to counsel apply to state felony prosecutions through the Fourteenth Amendment?",citation:"372 U.S. 335"},
+  {name:"Miranda v. Arizona",year:1966,topics:["due","criminal"],holding:"Before custodial interrogation, police must inform suspects of their right to remain silent and their right to an attorney — the famous \"Miranda warnings.\"",landmark:true,vote:"5-4",author:"Warren",question:"Must police inform criminal suspects of their Fifth and Sixth Amendment rights before interrogation?",citation:"384 U.S. 436"},
+  {name:"Lawrence v. Texas",year:2003,topics:["due"],holding:"The liberty protected by the Due Process Clause gives consenting adults the right to engage in private intimate conduct; anti-sodomy laws are unconstitutional.",landmark:true,vote:"6-3",author:"Kennedy",question:"Does a Texas law criminalizing same-sex sexual conduct violate the Due Process Clause?",citation:"539 U.S. 558"},
+  {name:"Obergefell v. Hodges",year:2015,topics:["due","equal"],holding:"Same-sex couples have a fundamental right to marry protected by both the Due Process and Equal Protection Clauses of the Fourteenth Amendment.",landmark:true,vote:"5-4",author:"Kennedy",question:"Does the Fourteenth Amendment require states to license and recognize marriages between two people of the same sex?",citation:"576 U.S. 644"},
+
+  // ═══ EQUAL PROTECTION ═══
+  {name:"Plessy v. Ferguson",year:1896,topics:["equal"],holding:"Racial segregation laws do not violate the Equal Protection Clause so long as the separate facilities are equal — the \"separate but equal\" doctrine.",landmark:true,vote:"7-1",author:"Brown",question:"Does a Louisiana law requiring racial segregation on trains violate the Fourteenth Amendment?",citation:"163 U.S. 537",overruled:true,overruledBy:"Brown v. Board of Education (1954)"},
+  {name:"Korematsu v. United States",year:1944,topics:["equal"],holding:"The forced internment of Japanese Americans during World War II was upheld as a wartime military necessity — a decision universally condemned and effectively overruled.",landmark:true,vote:"6-3",author:"Black",question:"Does the military's exclusion of persons of Japanese ancestry from the West Coast during wartime violate the Fifth Amendment?",citation:"323 U.S. 214",overruled:true,overruledBy:"Trump v. Hawaii (2018) (repudiated)"},
+  {name:"Brown v. Board of Education",year:1954,topics:["equal"],holding:"Racial segregation in public schools is inherently unequal and violates the Equal Protection Clause, overruling Plessy v. Ferguson's \"separate but equal\" doctrine.",landmark:true,vote:"9-0",author:"Warren",question:"Does racial segregation of children in public schools violate the Equal Protection Clause?",citation:"347 U.S. 483"},
+  {name:"Loving v. Virginia",year:1967,topics:["equal","due"],holding:"Laws banning interracial marriage violate both the Equal Protection and Due Process Clauses of the Fourteenth Amendment.",landmark:true,vote:"9-0",author:"Warren",question:"Do state laws prohibiting interracial marriage violate the Fourteenth Amendment?",citation:"388 U.S. 1"},
+  {name:"Reed v. Reed",year:1971,topics:["equal"],holding:"A state law automatically preferring men over women as estate administrators violates the Equal Protection Clause — the first time the Court struck down a law for sex discrimination.",landmark:true,vote:"7-0",author:"Burger",question:"Does an Idaho law giving mandatory preference to males over females as estate administrators violate the Equal Protection Clause?",citation:"404 U.S. 71"},
+  {name:"Regents of UC v. Bakke",year:1978,topics:["equal"],holding:"Racial quotas in university admissions are unconstitutional, but race may be considered as one factor among many in a holistic admissions process.",landmark:true,vote:"Split*",author:"Powell",question:"Does a university medical school's special admissions program reserving seats for minorities violate the Equal Protection Clause?",citation:"438 U.S. 265"},
+  {name:"United States v. Virginia",year:1996,topics:["equal"],holding:"Virginia Military Institute's male-only admissions policy violates the Equal Protection Clause because the state failed to show an \"exceedingly persuasive justification\" for excluding women.",landmark:true,vote:"7-1",author:"Ginsburg",question:"Does VMI's male-only admissions policy violate the Equal Protection Clause?",citation:"518 U.S. 515"},
+  {name:"Grutter v. Bollinger",year:2003,topics:["equal"],holding:"Race-conscious university admissions to achieve student body diversity can survive strict scrutiny as a compelling interest, provided it uses holistic, individualized review rather than quotas.",landmark:true,vote:"5-4",author:"O'Connor",question:"Does the University of Michigan Law School's race-conscious admissions program violate the Equal Protection Clause?",citation:"539 U.S. 306",overruled:true,overruledBy:"Students for Fair Admissions v. Harvard (2023)"},
+  {name:"Shelby County v. Holder",year:2013,topics:["equal","voting"],holding:"The Voting Rights Act's formula for requiring certain states to get federal approval before changing voting laws is unconstitutional because it relies on decades-old data that no longer reflects current conditions.",landmark:true,vote:"5-4",author:"Roberts",question:"Does Section 4(b) of the Voting Rights Act, which determines which jurisdictions need federal preclearance, violate the Constitution?",citation:"570 U.S. 529"},
+  {name:"United States v. Windsor",year:2013,topics:["equal","due"],holding:"The federal Defense of Marriage Act's definition of marriage as only between a man and a woman is unconstitutional because it denies equal liberty to same-sex couples married under state law.",landmark:true,vote:"5-4",author:"Kennedy",question:"Does DOMA's federal definition of marriage as between a man and a woman violate the Fifth Amendment's Due Process Clause?",citation:"570 U.S. 744"},
+  {name:"Bostock v. Clayton County",year:2020,topics:["equal"],holding:"Title VII's prohibition on employment discrimination \"because of sex\" encompasses discrimination based on sexual orientation and gender identity.",landmark:true,vote:"6-3",author:"Gorsuch",question:"Does Title VII of the Civil Rights Act prohibit employment discrimination against gay and transgender individuals?",citation:"590 U.S. 644"},
+  {name:"Students for Fair Admissions v. Harvard",year:2023,topics:["equal"],holding:"Race-based admissions programs at Harvard and the University of North Carolina violate the Equal Protection Clause; universities may not use race as a factor in admissions.",landmark:true,vote:"6-3",author:"Roberts",question:"Do Harvard's and UNC's race-conscious admissions programs violate the Equal Protection Clause?",citation:"600 U.S. 181"},
+
+  // ═══ PRIVACY & REPRODUCTIVE RIGHTS ═══
+  {name:"Roe v. Wade",year:1973,topics:["privacy","due"],holding:"The Constitution protects a woman's right to choose to have an abortion before fetal viability, grounded in the right to privacy under the Due Process Clause.",landmark:true,vote:"7-2",author:"Blackmun",question:"Does the Constitution recognize a right to abortion?",citation:"410 U.S. 113",overruled:true,overruledBy:"Dobbs v. Jackson Women's Health Organization (2022)"},
+  {name:"Planned Parenthood v. Casey",year:1992,topics:["privacy","due"],holding:"Reaffirmed the core of Roe v. Wade but replaced the trimester framework with the \"undue burden\" standard — regulations are unconstitutional only if they place a substantial obstacle in the path of a woman seeking an abortion.",landmark:true,vote:"5-4",author:"O'Connor/Kennedy/Souter",question:"Can Pennsylvania impose waiting periods, informed consent, and parental consent requirements for abortion?",citation:"505 U.S. 833",overruled:true,overruledBy:"Dobbs v. Jackson Women's Health Organization (2022)"},
+  {name:"Whole Woman's Health v. Hellerstedt",year:2016,topics:["privacy"],holding:"Texas laws requiring abortion clinics to meet ambulatory surgical center standards and doctors to have hospital admitting privileges impose an undue burden on abortion access with no medical benefit.",landmark:false,vote:"5-3",author:"Breyer",question:"Do Texas regulations on abortion facilities impose an undue burden on a woman's right to an abortion?",citation:"579 U.S. 582"},
+  {name:"Dobbs v. Jackson Women's Health Organization",year:2022,topics:["privacy","due"],holding:"The Constitution does not confer a right to abortion; Roe v. Wade and Planned Parenthood v. Casey are overruled, and the authority to regulate abortion is returned to the people and their elected representatives.",landmark:true,vote:"6-3",author:"Alito",question:"Does the Constitution protect the right to obtain an abortion?",citation:"597 U.S. 215"},
+
+  // ═══ CRIMINAL JUSTICE ═══
+  {name:"Mapp v. Ohio",year:1961,topics:["criminal"],holding:"Evidence obtained through an unreasonable search and seizure in violation of the Fourth Amendment is inadmissible in state criminal trials — extending the \"exclusionary rule\" to the states.",landmark:true,vote:"6-3",author:"Clark",question:"Does the Fourth Amendment's exclusionary rule apply to state criminal proceedings?",citation:"367 U.S. 643"},
+  {name:"Katz v. United States",year:1967,topics:["criminal"],holding:"The Fourth Amendment protects people's reasonable expectations of privacy, not just physical spaces — wiretapping a public phone booth without a warrant is an unconstitutional search.",landmark:true,vote:"7-1",author:"Stewart",question:"Does the Fourth Amendment protect conversations on a public telephone from warrantless government surveillance?",citation:"389 U.S. 347"},
+  {name:"Terry v. Ohio",year:1968,topics:["criminal"],holding:"Police may briefly stop and frisk a person based on reasonable suspicion of criminal activity, even without a warrant or probable cause.",landmark:true,vote:"8-1",author:"Warren",question:"Can a police officer stop and frisk a person based on observed suspicious behavior without a warrant?",citation:"392 U.S. 1"},
+  {name:"Furman v. Georgia",year:1972,topics:["criminal"],holding:"The arbitrary and inconsistent imposition of the death penalty as then practiced violates the Eighth Amendment's ban on cruel and unusual punishment, effectively placing a moratorium on capital punishment.",landmark:true,vote:"5-4",author:"Per Curiam",question:"Does the imposition of the death penalty constitute cruel and unusual punishment in violation of the Eighth Amendment?",citation:"408 U.S. 238"},
+  {name:"Gregg v. Georgia",year:1976,topics:["criminal"],holding:"The death penalty is not inherently cruel and unusual punishment; states may impose capital punishment under sentencing guidelines that prevent arbitrary application.",landmark:true,vote:"7-2",author:"Stewart",question:"Does the death penalty under Georgia's reformed sentencing procedures violate the Eighth Amendment?",citation:"428 U.S. 153"},
+  {name:"Batson v. Kentucky",year:1986,topics:["criminal","equal"],holding:"Using peremptory challenges to exclude jurors solely because of their race violates the Equal Protection Clause.",landmark:true,vote:"7-2",author:"Powell",question:"Does a prosecutor's use of peremptory challenges to strike Black jurors violate the defendant's right to equal protection?",citation:"476 U.S. 79"},
+  {name:"Atkins v. Virginia",year:2002,topics:["criminal"],holding:"Executing intellectually disabled individuals violates the Eighth Amendment's prohibition on cruel and unusual punishment.",landmark:false,vote:"6-3",author:"Stevens",question:"Does the execution of an intellectually disabled person violate the Eighth Amendment?",citation:"536 U.S. 304"},
+  {name:"Roper v. Simmons",year:2005,topics:["criminal"],holding:"The Eighth Amendment forbids the death penalty for offenders who were under 18 years old when they committed the crime.",landmark:true,vote:"5-4",author:"Kennedy",question:"Does the Eighth Amendment prohibit execution of individuals who committed their crimes as juveniles?",citation:"543 U.S. 551"},
+  {name:"Riley v. California",year:2014,topics:["criminal"],holding:"Police generally need a warrant to search the digital contents of a cell phone seized from an individual during an arrest.",landmark:true,vote:"9-0",author:"Roberts",question:"Does the warrantless search of a cell phone during a lawful arrest violate the Fourth Amendment?",citation:"573 U.S. 373"},
+  {name:"Carpenter v. United States",year:2018,topics:["criminal"],holding:"The government generally needs a warrant to access historical cell-site location information held by a wireless carrier, as individuals have a reasonable expectation of privacy in their physical movements.",landmark:true,vote:"5-4",author:"Roberts",question:"Does accessing historical cell phone location records constitute a search under the Fourth Amendment?",citation:"585 U.S. 296"},
+  {name:"Timbs v. Indiana",year:2019,topics:["criminal","federalism"],holding:"The Eighth Amendment's Excessive Fines Clause is incorporated against the states through the Fourteenth Amendment.",landmark:false,vote:"9-0",author:"Ginsburg",question:"Does the Eighth Amendment's Excessive Fines Clause apply to state and local governments?",citation:"586 U.S. 146"},
+  {name:"City of Grants Pass v. Johnson",year:2024,topics:["criminal"],holding:"The Eighth Amendment does not prohibit cities from enforcing generally applicable public camping ordinances against homeless individuals, even when shelter is unavailable.",landmark:false,vote:"6-3",author:"Gorsuch",question:"Do ordinances prohibiting camping on public property constitute cruel and unusual punishment when applied to homeless individuals?",citation:"603 U.S. 205"},
+
+  // ═══ EXECUTIVE POWER / SEPARATION OF POWERS ═══
+  {name:"Marbury v. Madison",year:1803,topics:["exec"],holding:"The Supreme Court has the power of judicial review — the authority to strike down laws that conflict with the Constitution.",landmark:true,vote:"4-0",author:"Marshall",question:"Does the Supreme Court have authority to issue writs of mandamus, and can it review acts of Congress for constitutionality?",citation:"5 U.S. 137"},
+  {name:"Youngstown Sheet & Tube Co. v. Sawyer",year:1952,topics:["exec"],holding:"The President cannot seize private property without congressional authorization, even during wartime emergency; executive power must stem from an act of Congress or the Constitution itself.",landmark:true,vote:"6-3",author:"Black",question:"Can the President seize private steel mills to prevent a strike during the Korean War without congressional authorization?",citation:"343 U.S. 579"},
+  {name:"United States v. Nixon",year:1974,topics:["exec"],holding:"Executive privilege is not absolute — the President must comply with judicial subpoenas for evidence in criminal proceedings when a sufficient showing of need is made.",landmark:true,vote:"8-0",author:"Burger",question:"Can the President invoke executive privilege to withhold tape recordings subpoenaed in a criminal trial?",citation:"418 U.S. 683"},
+  {name:"INS v. Chadha",year:1983,topics:["exec"],holding:"The legislative veto — Congress overriding executive action by one-house resolution — violates the constitutional requirements of bicameralism and presentment.",landmark:true,vote:"7-2",author:"Burger",question:"Does a provision allowing one house of Congress to override executive action violate the separation of powers?",citation:"462 U.S. 919"},
+  {name:"Chevron v. Natural Resources Defense Council",year:1984,topics:["exec","commerce"],holding:"Courts should defer to a federal agency's reasonable interpretation of an ambiguous statute that the agency administers — the famous \"Chevron deference\" doctrine.",landmark:true,vote:"6-0",author:"Stevens",question:"Should courts defer to an agency's interpretation of a statute it administers when the statute is ambiguous?",citation:"467 U.S. 837",overruled:true,overruledBy:"Loper Bright Enterprises v. Raimondo (2024)"},
+  {name:"Clinton v. City of New York",year:1998,topics:["exec"],holding:"The Line Item Veto Act is unconstitutional because it allows the President to unilaterally amend or repeal parts of duly enacted statutes, violating the Presentment Clause.",landmark:false,vote:"6-3",author:"Stevens",question:"Does the Line Item Veto Act violate the Presentment Clause of the Constitution?",citation:"524 U.S. 417"},
+  {name:"West Virginia v. EPA",year:2022,topics:["exec","commerce"],holding:"Agencies cannot claim broad regulatory authority on issues of major economic and political significance without clear congressional authorization — the \"major questions doctrine.\"",landmark:true,vote:"6-3",author:"Roberts",question:"Can the EPA restructure the nation's energy grid under the Clean Air Act without clear congressional authorization?",citation:"597 U.S. 697"},
+  {name:"Loper Bright Enterprises v. Raimondo",year:2024,topics:["exec"],holding:"Chevron deference is overruled — courts must exercise their own independent judgment in interpreting statutes and may not defer to agency interpretations merely because a statute is ambiguous.",landmark:true,vote:"6-3",author:"Roberts",question:"Should Chevron v. NRDC be overruled so that courts independently interpret ambiguous statutes?",citation:"602 U.S. 369"},
+  {name:"Trump v. United States",year:2024,topics:["exec"],holding:"A former President has absolute immunity from criminal prosecution for actions within his core constitutional powers and presumptive immunity for all official acts, but no immunity for unofficial acts.",landmark:true,vote:"6-3",author:"Roberts",question:"Does a former President enjoy immunity from criminal prosecution for conduct alleged to involve official acts during his tenure?",citation:"603 U.S. 593"},
+  {name:"SEC v. Jarkesy",year:2024,topics:["exec"],holding:"When the SEC seeks civil penalties for securities fraud, the Seventh Amendment entitles defendants to a jury trial in federal court rather than an agency tribunal.",landmark:false,vote:"6-3",author:"Roberts",question:"Does the Seventh Amendment require a jury trial when the SEC seeks civil penalties for securities fraud?",citation:"603 U.S. 109"},
+
+  // ═══ VOTING & ELECTIONS ═══
+  {name:"Baker v. Carr",year:1962,topics:["voting"],holding:"Legislative apportionment disputes are justiciable under the Equal Protection Clause — federal courts can hear challenges to how voting districts are drawn.",landmark:true,vote:"6-2",author:"Brennan",question:"Are challenges to state legislative apportionment justiciable, or are they non-justiciable political questions?",citation:"369 U.S. 186"},
+  {name:"Reynolds v. Sims",year:1964,topics:["voting","equal"],holding:"State legislative districts must be roughly equal in population — \"one person, one vote\" — under the Equal Protection Clause.",landmark:true,vote:"8-1",author:"Warren",question:"Must both houses of a state legislature be apportioned on a population basis?",citation:"377 U.S. 533"},
+  {name:"Bush v. Gore",year:2000,topics:["voting"],holding:"Florida's recount procedures violated the Equal Protection Clause due to the absence of uniform standards for evaluating ballots, effectively deciding the 2000 presidential election.",landmark:true,vote:"5-4",author:"Per Curiam",question:"Do varying recount standards across Florida counties violate the Equal Protection Clause?",citation:"531 U.S. 98"},
+  {name:"Rucho v. Common Cause",year:2019,topics:["voting"],holding:"Claims of partisan gerrymandering present political questions beyond the reach of federal courts — there are no judicially manageable standards for resolving them.",landmark:true,vote:"5-4",author:"Roberts",question:"Are partisan gerrymandering claims justiciable under the Constitution?",citation:"588 U.S. 684"},
+  {name:"Moore v. Harper",year:2023,topics:["voting"],holding:"The Elections Clause does not insulate state legislatures from review by state courts when regulating federal elections, rejecting the independent state legislature theory.",landmark:true,vote:"6-3",author:"Roberts",question:"Does the Elections Clause give state legislatures unchecked power to set rules for federal elections, free from state court review?",citation:"600 U.S. 1"},
+  {name:"Allen v. Milligan",year:2023,topics:["voting","equal"],holding:"Alabama's congressional redistricting map likely violated Section 2 of the Voting Rights Act by diluting Black voting power in a state where Black voters could form a majority in a second district.",landmark:false,vote:"5-4",author:"Roberts",question:"Did Alabama's 2021 congressional map violate Section 2 of the Voting Rights Act?",citation:"599 U.S. 1"},
+  {name:"Trump v. Anderson",year:2024,topics:["voting","exec"],holding:"States cannot enforce Section 3 of the Fourteenth Amendment to disqualify a presidential candidate from the ballot — only Congress may legislate to enforce that provision against federal officeholders.",landmark:true,vote:"9-0",author:"Per Curiam",question:"Can a state exclude a presidential candidate from the ballot under Section 3 of the Fourteenth Amendment?",citation:"601 U.S. 100"},
+
+  // ═══ COMMERCE & REGULATION ═══
+  {name:"Gibbons v. Ogden",year:1824,topics:["commerce"],holding:"Congress has broad power to regulate interstate commerce, including navigation between states, and federal commerce laws take precedence over conflicting state laws.",landmark:true,vote:"6-0",author:"Marshall",question:"Can a state grant an exclusive monopoly over navigation within its waters when it conflicts with a federal license?",citation:"22 U.S. 1"},
+  {name:"NLRB v. Jones & Laughlin Steel Corp.",year:1937,topics:["commerce"],holding:"The Commerce Clause authorizes federal regulation of labor relations in industries that have a substantial effect on interstate commerce, upholding the National Labor Relations Act.",landmark:true,vote:"5-4",author:"Hughes",question:"Can Congress regulate labor relations at a manufacturing company under the Commerce Clause?",citation:"301 U.S. 1"},
+  {name:"Wickard v. Filburn",year:1942,topics:["commerce"],holding:"Congress may regulate even purely local activity — here, a farmer growing wheat for personal use — if the activity, taken in the aggregate, substantially affects interstate commerce.",landmark:true,vote:"9-0",author:"Jackson",question:"Can Congress regulate a farmer's production of wheat intended for personal consumption?",citation:"317 U.S. 111"},
+  {name:"Heart of Atlanta Motel v. United States",year:1964,topics:["commerce","equal"],holding:"Congress may use the Commerce Clause to prohibit racial discrimination in places of public accommodation that serve interstate travelers.",landmark:true,vote:"9-0",author:"Clark",question:"Does the Civil Rights Act's prohibition on racial discrimination in public accommodations exceed Congress's commerce power?",citation:"379 U.S. 241"},
+  {name:"United States v. Lopez",year:1995,topics:["commerce"],holding:"The Commerce Clause has limits — Congress cannot regulate gun possession in school zones because the activity does not substantially affect interstate commerce.",landmark:true,vote:"5-4",author:"Rehnquist",question:"Does the Gun-Free School Zones Act exceed Congress's power under the Commerce Clause?",citation:"514 U.S. 549"},
+  {name:"Gonzales v. Raich",year:2005,topics:["commerce"],holding:"Congress may prohibit the local cultivation and use of marijuana for medical purposes because it is part of a class of activities that substantially affects the interstate drug market.",landmark:false,vote:"6-3",author:"Stevens",question:"Can Congress criminalize the local cultivation of marijuana for personal medical use under the Commerce Clause?",citation:"545 U.S. 1"},
+  {name:"National Federation of Independent Business v. Sebelius",year:2012,topics:["commerce","federalism"],holding:"The Affordable Care Act's individual mandate is sustained as a valid exercise of the taxing power, though the Commerce Clause does not authorize compelling individuals to purchase insurance; the Medicaid expansion cannot be coerced.",landmark:true,vote:"5-4",author:"Roberts",question:"Is the ACA's individual mandate constitutional, and can Congress threaten states with loss of existing Medicaid funding?",citation:"567 U.S. 519"},
+
+  // ═══ IMMIGRATION ═══
+  {name:"Plyler v. Doe",year:1982,topics:["immigration","equal"],holding:"States cannot deny free public education to undocumented immigrant children — such a denial violates the Equal Protection Clause because it imposes a lifetime hardship on a discrete class of children.",landmark:true,vote:"5-4",author:"Brennan",question:"Can a state deny public school enrollment to children of undocumented immigrants?",citation:"457 U.S. 202"},
+  {name:"Arizona v. United States",year:2012,topics:["immigration","federalism"],holding:"Federal immigration law preempts most of Arizona's enforcement provisions, though the state may require police to check immigration status during lawful stops.",landmark:true,vote:"5-3",author:"Kennedy",question:"Do Arizona's immigration enforcement provisions conflict with federal immigration law?",citation:"567 U.S. 387"},
+  {name:"Trump v. Hawaii",year:2018,topics:["immigration","exec"],holding:"The President's proclamation restricting entry from several predominantly Muslim countries falls within the broad executive authority over immigration and does not violate the Establishment Clause.",landmark:true,vote:"5-4",author:"Roberts",question:"Does the President's travel restriction proclamation exceed executive authority or violate the Establishment Clause?",citation:"585 U.S. 667"},
+  {name:"Department of Homeland Security v. Regents of UC",year:2020,topics:["immigration","exec"],holding:"The Trump administration's rescission of the DACA program was arbitrary and capricious under the Administrative Procedure Act because it failed to consider important aspects of the problem.",landmark:false,vote:"5-4",author:"Roberts",question:"Was the decision to rescind DACA reviewable, and if so, was it lawful?",citation:"591 U.S. 1"},
+  {name:"United States v. Texas",year:2023,topics:["immigration","exec"],holding:"Texas lacks standing to challenge federal guidelines prioritizing certain noncitizens for immigration enforcement because the state cannot show a concrete injury traceable to those guidelines.",landmark:false,vote:"8-1",author:"Kavanaugh",question:"Does Texas have standing to challenge the federal government's immigration enforcement priorities?",citation:"599 U.S. 670"},
+
+  // ═══ FEDERALISM ═══
+  {name:"McCulloch v. Maryland",year:1819,topics:["federalism","exec"],holding:"Congress has implied powers under the Necessary and Proper Clause to create a national bank, and states cannot tax federal institutions — establishing the doctrine of federal supremacy.",landmark:true,vote:"7-0",author:"Marshall",question:"Does Congress have the power to establish a national bank, and can a state tax it?",citation:"17 U.S. 316"},
+  {name:"Dred Scott v. Sandford",year:1857,topics:["federalism","equal"],holding:"African Americans, whether enslaved or free, are not citizens and cannot sue in federal court; Congress cannot prohibit slavery in the territories — the Court's most condemned decision, overruled by the Thirteenth and Fourteenth Amendments.",landmark:true,vote:"7-2",author:"Taney",question:"Can an enslaved person who has lived in a free state sue for freedom in federal court?",citation:"60 U.S. 393",overruled:true,overruledBy:"13th & 14th Amendments (1865, 1868)"},
+  {name:"Printz v. United States",year:1997,topics:["federalism"],holding:"The federal government cannot \"commandeer\" state and local officers to enforce federal regulatory programs — the Brady Act's requirement that local officials conduct background checks is unconstitutional.",landmark:true,vote:"5-4",author:"Scalia",question:"Can the federal government require state law enforcement officials to conduct background checks on handgun purchasers?",citation:"521 U.S. 898"},
+  {name:"Harrington v. Purdue Pharma L.P.",year:2024,topics:["federalism","commerce"],holding:"The Bankruptcy Code does not authorize a court to discharge claims by third parties against non-debtor Sackler family members who did not themselves file for bankruptcy — blocking the OxyContin settlement.",landmark:false,vote:"5-4",author:"Gorsuch",question:"Can a bankruptcy court approve a reorganization plan that releases non-debtor third parties from liability without claimants' consent?",citation:"603 U.S. 490"},
+];
+
+// ─── State ──────────────────────────────────────
+let state = {
+  activeTopic: null,
+  activeJustice: null,
+  justiceSearch: '',
+  mode: 'topics', // 'topics' or 'justices'
+  searchQuery: '',
+  sortBy: 'year-desc',
+  view: 'grid',
+  expandedCard: null
+};
+
+// ─── Helpers ────────────────────────────────────
+function getTopicColor(topics) {
+  return TOPICS[topics[0]]?.color || '#666';
+}
+function getTopicCounts() {
+  const counts = {};
+  Object.keys(TOPICS).forEach(k => counts[k] = 0);
+  CASES.forEach(c => c.topics.forEach(t => { if(counts[t] !== undefined) counts[t]++; }));
+  return counts;
+}
+function getAllJustices() {
+  const justices = new Map();
+  CASES.forEach(c => {
+    const addJ = (name, role) => {
+      if (!name) return;
+      if (!justices.has(name)) justices.set(name, {authored:0,majority:0,concurrence:0,dissent:0,cases:0});
+      const j = justices.get(name);
+      j[role]++;
+      j.cases++;
+    };
+    if (c.author && c.author !== 'Per Curiam') addJ(c.author, 'authored');
+    if (c.concurrences) c.concurrences.forEach(n => addJ(n, 'concurrence'));
+    if (c.dissents) c.dissents.forEach(n => addJ(n, 'dissent'));
+    // For justices in majority who didn't author or concur
+    if (c.majority) c.majority.forEach(n => { if (n !== c.author) addJ(n, 'majority'); });
+  });
+  return justices;
+}
+
+function caseInvolvesJustice(c, name) {
+  return c.author === name ||
+    (c.concurrences && c.concurrences.includes(name)) ||
+    (c.dissents && c.dissents.includes(name)) ||
+    (c.majority && c.majority.includes(name));
+}
+
+function filterCases() {
+  let filtered = [...CASES];
+  if (state.activeTopic) {
+    filtered = filtered.filter(c => c.topics.includes(state.activeTopic));
+  }
+  if (state.activeJustice) {
+    filtered = filtered.filter(c => caseInvolvesJustice(c, state.activeJustice));
+  }
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    filtered = filtered.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.holding.toLowerCase().includes(q) ||
+      c.topics.some(t => TOPICS[t]?.name.toLowerCase().includes(q)) ||
+      c.author?.toLowerCase().includes(q) ||
+      String(c.year).includes(q)
+    );
+  }
+  // Sort: in justice mode, sort authored first then by year
+  if (state.activeJustice) {
+    const j = state.activeJustice;
+    filtered.sort((a,b) => {
+      const aAuth = a.author === j ? 1 : 0;
+      const bAuth = b.author === j ? 1 : 0;
+      if (bAuth !== aAuth) return bAuth - aAuth;
+      return b.year - a.year;
+    });
+  } else if (state.sortBy === 'year-desc') filtered.sort((a,b) => b.year - a.year);
+  else if (state.sortBy === 'year-asc') filtered.sort((a,b) => a.year - b.year);
+  else if (state.sortBy === 'landmark') filtered.sort((a,b) => (b.landmark?1:0) - (a.landmark?1:0) || b.year - a.year);
+  return filtered;
+}
+
+function highlightText(text, query) {
+  if (!query) return text;
+  const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(re, '<span class="search-highlight">$1</span>');
+}
+
+// ─── Render ─────────────────────────────────────
+function renderTopics() {
+  const el = document.getElementById('topics');
+  const counts = getTopicCounts();
+  let html = `<button class="topic-pill ${!state.activeTopic?'active':''}" data-topic="" style="--pill-color:#a78bfa">
+    All <span class="count">${CASES.length}</span>
+  </button>`;
+  Object.entries(TOPICS).forEach(([key, topic]) => {
+    html += `<button class="topic-pill ${state.activeTopic===key?'active':''}"
+      data-topic="${key}" style="--pill-color:${topic.color}">
+      ${topic.short} <span class="count">${counts[key]}</span>
+    </button>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderDoctrine() {
+  const bar = document.getElementById('doctrine');
+  const text = document.getElementById('doctrine-text');
+  if (state.activeTopic && DOCTRINE[state.activeTopic]) {
+    text.innerHTML = DOCTRINE[state.activeTopic];
+    bar.className = 'doctrine-bar visible';
+  } else {
+    bar.className = 'doctrine-bar hidden';
+  }
+}
+
+function renderCard(c, i) {
+  const color = getTopicColor(c.topics);
+  const isRecent = c.year >= 2020;
+  const caseKey = c.name + c.year;
+  const isExpanded = state.expandedCard === caseKey;
+  let badges = '';
+  if (c.landmark) badges += '<span class="badge badge-landmark">Landmark</span>';
+  if (c.overruled) badges += '<span class="badge badge-overruled">Overruled</span>';
+  if (isRecent && !c.landmark) badges += '<span class="badge badge-recent">Recent</span>';
+
+  const topicTag = TOPICS[c.topics[0]];
+  const q = state.searchQuery;
+  const name = highlightText(c.name, q);
+  const holding = highlightText(c.holding, q);
+
+  // Justice role badge for justice mode
+  let roleBadge = '';
+  if (state.activeJustice) {
+    const j = state.activeJustice;
+    if (c.author === j) roleBadge = '<span class="role-badge role-author">Author</span>';
+    else if (c.concurrences && c.concurrences.includes(j)) roleBadge = '<span class="role-badge role-concurrence">Concurrence</span>';
+    else if (c.dissents && c.dissents.includes(j)) roleBadge = '<span class="role-badge role-dissent">Dissent</span>';
+    else roleBadge = '<span class="role-badge role-majority">Majority</span>';
+  }
+
+  let details = '';
+  if (c.question) {
+    details += `<div class="detail-row"><span class="detail-label">Question</span><span class="detail-value"><em>${c.question}</em></span></div>`;
+  }
+  details += `<div class="detail-row"><span class="detail-label">Decision</span><span class="detail-value">${c.vote} · Opinion by ${c.author||'Per Curiam'}</span></div>`;
+  if (c.concurrences && c.concurrences.length) {
+    details += `<div class="detail-row"><span class="detail-label">Concurrences</span><span class="detail-value">${c.concurrences.join(', ')}</span></div>`;
+  }
+  if (c.dissents && c.dissents.length) {
+    details += `<div class="detail-row"><span class="detail-label">Dissents</span><span class="detail-value">${c.dissents.join(', ')}</span></div>`;
+  }
+  details += `<div class="detail-row"><span class="detail-label">Citation</span><span class="detail-value">${c.citation}</span></div>`;
+  if (c.overruledBy) {
+    details += `<div class="detail-row"><span class="detail-label">Overruled by</span><span class="detail-value" style="color:#b84040">${c.overruledBy}</span></div>`;
+  }
+  const parts = c.citation.match(/(\d+)\s+U\.S\.\s+(\d+)/);
+  let links = '<div class="detail-links">';
+  if (parts) {
+    links += `<a class="detail-link" href="https://supreme.justia.com/cases/federal/us/${parts[1]}/${parts[2]}/" target="_blank" rel="noopener">Justia →</a>`;
+    links += `<a class="detail-link" href="https://www.law.cornell.edu/supremecourt/text/${parts[1]}US${parts[2]}" target="_blank" rel="noopener">Cornell LII →</a>`;
+  }
+  if (c.oyez) links += `<a class="detail-link" href="${c.oyez}" target="_blank" rel="noopener">Oyez →</a>`;
+  links += '</div>';
+
+  return `<div class="case-card ${c.landmark?'landmark':''} ${isExpanded?'expanded':''}"
+    style="--card-color:${color};animation-delay:${Math.min(i*0.03,0.6)}s"
+    data-case-key="${caseKey}">
+    ${(badges||roleBadge) ? '<div class="card-badges">'+badges+roleBadge+'</div>' : ''}
+    <div class="case-name">${name}</div>
+    <div class="case-meta">
+      <span class="year">${c.year}</span>
+      <span class="dot">·</span>
+      <span>${c.vote}</span>
+      ${c.author ? '<span class="dot">·</span><span>'+c.author+'</span>' : ''}
+    </div>
+    <div class="case-holding">${holding}</div>
+    <div class="card-topic-tag">${topicTag.name}</div>
+    <div class="case-details">
+      <div class="details-inner">
+        ${details}
+        ${links}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderGrid() {
+  const cases = filterCases();
+  const el = document.getElementById('cases-grid');
+  if (cases.length === 0) {
+    el.innerHTML = '<div class="no-results"><span>⚖️</span>No cases match your search</div>';
+  } else {
+    el.innerHTML = cases.map((c, i) => renderCard(c, i)).join('');
+  }
+  let countLabel = '';
+  if (state.activeJustice) countLabel = `involving Justice ${state.activeJustice}`;
+  else if (state.activeTopic) countLabel = `in ${TOPICS[state.activeTopic].name}`;
+  document.getElementById('case-count').innerHTML =
+    `<strong>${cases.length}</strong> case${cases.length!==1?'s':''} ${countLabel}`;
+}
+
+function renderTimeline() {
+  const cases = filterCases();
+  const el = document.getElementById('timeline-content');
+  if (cases.length === 0) {
+    el.innerHTML = '<div class="no-results"><span>⚖️</span>No cases match your search</div>';
+    return;
+  }
+  // Sort by year ascending for timeline
+  const sorted = [...cases].sort((a,b) => a.year - b.year);
+  let html = '';
+  let lastDecade = null;
+  sorted.forEach((c, i) => {
+    const decade = Math.floor(c.year / 10) * 10;
+    if (decade !== lastDecade) {
+      html += `<div class="timeline-year-marker">${decade}s</div>`;
+      lastDecade = decade;
+    }
+    html += `<div class="timeline-card" style="--card-color:${getTopicColor(c.topics)}">${renderCard(c, i)}</div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderJustices() {
+  const all = getAllJustices();
+  const el = document.getElementById('justice-list');
+  const q = state.justiceSearch.toLowerCase();
+  let entries = [...all.entries()].sort((a,b) => b[1].cases - a[1].cases);
+  if (q) entries = entries.filter(([name]) => name.toLowerCase().includes(q));
+
+  el.innerHTML = entries.map(([name, stats]) =>
+    `<button class="justice-chip ${state.activeJustice===name?'active':''}" data-justice="${name}">
+      ${name} <span class="chip-count">${stats.cases}</span>
+    </button>`
+  ).join('');
+
+  // Profile
+  const profile = document.getElementById('justice-profile');
+  if (state.activeJustice && all.has(state.activeJustice)) {
+    const s = all.get(state.activeJustice);
+    const cases = CASES.filter(c => caseInvolvesJustice(c, state.activeJustice));
+    profile.style.display = 'block';
+    profile.innerHTML = `
+      <h2>Justice ${state.activeJustice}</h2>
+      <div class="jp-meta">${cases.length} cases in database · ${s.authored} opinions authored</div>
+      <div class="jp-stats">
+        <div class="jp-stat"><strong>${s.authored}</strong> <span class="jp-stat-label">Authored</span></div>
+        <div class="jp-stat"><strong>${s.concurrence}</strong> <span class="jp-stat-label">Concurrences</span></div>
+        <div class="jp-stat"><strong>${s.dissent}</strong> <span class="jp-stat-label">Dissents</span></div>
+      </div>`;
+  } else {
+    profile.style.display = 'none';
+  }
+}
+
+function render() {
+  renderTopics();
+  renderDoctrine();
+  renderGrid();
+  renderTimeline();
+  if (state.mode === 'justices') renderJustices();
+}
+
+// ─── Event Handlers ─────────────────────────────
+function toggleCard(key) {
+  state.expandedCard = state.expandedCard === key ? null : key;
+  document.querySelectorAll('.case-card').forEach(card => {
+    card.classList.toggle('expanded', card.dataset.caseKey === state.expandedCard);
+  });
+}
+
+// Card click delegation
+document.addEventListener('click', e => {
+  const card = e.target.closest('.case-card');
+  if (!card) return;
+  // Don't toggle if clicking a link
+  if (e.target.closest('a')) return;
+  toggleCard(card.dataset.caseKey);
+});
+
+// Mode toggle
+document.querySelector('.mode-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.mode-tab');
+  if (!tab) return;
+  state.mode = tab.dataset.mode;
+  state.activeJustice = null;
+  state.activeTopic = null;
+  state.expandedCard = null;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t === tab));
+  document.getElementById('topics').style.display = state.mode === 'topics' ? '' : 'none';
+  document.getElementById('justice-panel').classList.toggle('active', state.mode === 'justices');
+  render();
+});
+
+// Justice list clicks
+document.getElementById('justice-list').addEventListener('click', e => {
+  const chip = e.target.closest('.justice-chip');
+  if (!chip) return;
+  const name = chip.dataset.justice;
+  state.activeJustice = state.activeJustice === name ? null : name;
+  state.expandedCard = null;
+  render();
+});
+
+document.getElementById('justice-search').addEventListener('input', e => {
+  state.justiceSearch = e.target.value.trim();
+  renderJustices();
+});
+
+document.getElementById('topics').addEventListener('click', e => {
+  const pill = e.target.closest('.topic-pill');
+  if (!pill) return;
+  const topic = pill.dataset.topic;
+  state.activeTopic = topic || null;
+  state.expandedCard = null;
+  render();
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  state.searchQuery = e.target.value.trim();
+  state.expandedCard = null;
+  render();
+});
+
+document.getElementById('sort').addEventListener('change', e => {
+  state.sortBy = e.target.value;
+  state.expandedCard = null;
+  render();
+});
+
+document.querySelector('.view-toggles').addEventListener('click', e => {
+  const btn = e.target.closest('.view-btn');
+  if (!btn) return;
+  state.view = btn.dataset.view;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.getElementById('cases-grid').classList.toggle('active', state.view === 'grid');
+  document.getElementById('cases-timeline').classList.toggle('active', state.view === 'timeline');
+  if (state.view === 'timeline') renderTimeline();
+});
+
+// Rotating placeholder
+const placeholders = [
+  'Search "abortion" or "free speech"...',
+  'Try a justice name like "Scalia"...',
+  'Search by year like "2024"...',
+  'Try "gerrymandering" or "guns"...',
+  'Search "immigration" or "privacy"...',
+];
+let phIdx = 0;
+setInterval(() => {
+  phIdx = (phIdx + 1) % placeholders.length;
+  document.getElementById('search').placeholder = placeholders[phIdx];
+}, 4000);
+
+// ─── Justice Vote Data (for key cases) ──────────
+// Format: [concurrences[], dissents[]]
+const VOTES = {
+  "Citizens United v. FEC2010": [["Thomas"],["Stevens","Ginsburg","Breyer","Sotomayor"]],
+  "District of Columbia v. Heller2008": [[],["Stevens","Souter","Ginsburg","Breyer"]],
+  "McDonald v. City of Chicago2010": [["Thomas"],["Stevens","Breyer","Ginsburg","Sotomayor"]],
+  "New York State Rifle & Pistol Association v. Bruen2022": [["Alito","Kavanaugh","Barrett"],["Breyer","Sotomayor","Kagan"]],
+  "United States v. Rahimi2024": [["Sotomayor","Gorsuch","Kavanaugh","Barrett","Jackson","Thomas"],[]],
+  "Obergefell v. Hodges2015": [[],["Roberts","Scalia","Thomas","Alito"]],
+  "Lawrence v. Texas2003": [["O'Connor"],["Scalia","Thomas"]],
+  "Dobbs v. Jackson Women's Health Organization2022": [["Thomas","Kavanaugh","Roberts"],["Breyer","Sotomayor","Kagan"]],
+  "Roe v. Wade1973": [["Stewart","Douglas","Burger"],["White","Rehnquist"]],
+  "Planned Parenthood v. Casey1992": [["Stevens","Blackmun"],["Rehnquist","White","Scalia","Thomas"]],
+  "Brown v. Board of Education1954": [[],[]],
+  "Shelby County v. Holder2013": [["Thomas"],["Ginsburg","Breyer","Sotomayor","Kagan"]],
+  "Bostock v. Clayton County2020": [["Alito","Thomas","Kavanaugh"],[]],
+  "Students for Fair Admissions v. Harvard2023": [["Thomas","Gorsuch","Kavanaugh"],["Sotomayor","Kagan","Jackson"]],
+  "Bush v. Gore2000": [["Rehnquist","Scalia","Thomas"],["Stevens","Souter","Ginsburg","Breyer"]],
+  "Rucho v. Common Cause2019": [[],["Kagan","Ginsburg","Breyer","Sotomayor"]],
+  "Trump v. United States2024": [["Thomas","Gorsuch","Barrett"],["Sotomayor","Kagan","Jackson"]],
+  "Loper Bright Enterprises v. Raimondo2024": [["Thomas","Gorsuch"],["Kagan","Sotomayor","Jackson"]],
+  "West Virginia v. EPA2022": [["Gorsuch","Alito"],["Kagan","Sotomayor","Breyer"]],
+  "National Federation of Independent Business v. Sebelius2012": [["Ginsburg","Breyer","Sotomayor","Kagan"],["Scalia","Kennedy","Thomas","Alito"]],
+  "Trump v. Hawaii2018": [["Thomas","Kennedy"],["Breyer","Kagan","Sotomayor"]],
+  "Carpenter v. United States2018": [["Kennedy","Thomas","Gorsuch","Alito"],[]],
+  "Riley v. California2014": [["Alito"],[]],
+  "Texas v. Johnson1989": [["Kennedy"],["Rehnquist","White","Stevens","O'Connor"]],
+  "Employment Division v. Smith1990": [["O'Connor"],["Blackmun","Brennan","Marshall"]],
+  "Kennedy v. Bremerton School District2022": [[],["Sotomayor","Kagan","Breyer"]],
+  "303 Creative LLC v. Elenis2023": [[],["Sotomayor","Kagan","Jackson"]],
+  "Miranda v. Arizona1966": [[],["Clark","Harlan","Stewart","White"]],
+  "City of Grants Pass v. Johnson2024": [["Thomas"],["Sotomayor","Kagan","Jackson"]],
+  "SEC v. Jarkesy2024": [["Gorsuch","Thomas"],["Sotomayor","Kagan","Jackson"]],
+  "Moore v. Harper2023": [["Kavanaugh","Barrett"],["Thomas","Gorsuch","Alito"]],
+  "Allen v. Milligan2023": [["Kavanaugh"],["Thomas","Gorsuch","Alito","Barrett"]],
+  "Trump v. Anderson2024": [["Barrett","Kagan","Sotomayor","Jackson"],[]],
+  "Arizona v. United States2012": [[],["Scalia","Thomas","Alito"]],
+  "Department of Homeland Security v. Regents of UC2020": [["Sotomayor"],["Thomas","Alito","Gorsuch","Kavanaugh"]],
+  "United States v. Windsor2013": [[],["Roberts","Scalia","Thomas","Alito"]],
+  "Masterpiece Cakeshop v. Colorado Civil Rights Commission2018": [["Kagan","Breyer","Gorsuch","Thomas"],["Ginsburg","Sotomayor"]],
+  "Snyder v. Phelps2011": [["Breyer"],["Alito"]],
+  "United States v. Lopez1995": [["Kennedy","Thomas"],["Stevens","Souter","Ginsburg","Breyer"]],
+  "Roper v. Simmons2005": [["Stevens","Ginsburg"],["O'Connor","Scalia","Thomas","Rehnquist"]],
+};
+
+// Enrich cases with vote data
+CASES.forEach(c => {
+  const key = c.name + c.year;
+  if (VOTES[key]) {
+    if (!c.concurrences) c.concurrences = VOTES[key][0];
+    if (!c.dissents) c.dissents = VOTES[key][1];
+  }
+});
+
+// ─── Init ───────────────────────────────────────
+render();
+</script>
+</body>
+</html>
